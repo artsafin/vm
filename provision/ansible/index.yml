@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  vars:
+    vm_home: /home/vagrant
+    src_home: /home/src
+  roles:
+  - { role: common, dotconfig_repo: 'https://github.com/artsafin/dotconfig.git' }
+

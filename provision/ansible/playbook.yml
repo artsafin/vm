@@ -1,0 +1,40 @@
+---
+- name: Beautify linux
+  hosts: all
+  remote_user: vagrant
+
+  vars:
+    configs_repo: https://github.com/artsafin/dotconfig.git
+
+  tasks:
+  - name: install git
+    sudo: true
+    apt: name=git state=present
+  - name: clone configs
+    git: repo={{ configs_repo }}
+         dest=/home/vagrant/dotconfig
+         force=yes
+
+- name: Deploy dev environment
+  hosts: all
+  remote_user: vagrant
+  sudo: true
+  sudo_user: root
+
+  vars:
+    system_packages:
+      - nginx
+      - php5
+      - php5-intl
+      - php5-curl
+      - php5-cli
+      - php5-mysql
+      - memcached
+
+  tasks:
+  - name: make source directories
+    command: mkdir -p /home/src
+
+  - name: install PHP stack
+    apt: name={{ item }} state=present
+    with_items: system_packages

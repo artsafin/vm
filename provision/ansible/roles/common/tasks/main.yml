@@ -1,0 +1,19 @@
+- name: install git
+  sudo: true
+  apt: name=git state=present
+- name: config sync (clone)
+  git: repo={{ dotconfig_repo }}
+       dest={{ vm_home }}/dotconfig
+       force=yes
+- name: config sync (symlink)
+  file: src={{ vm_home }}/dotconfig/.git dest={{ vm_home }}/.git state=link
+- name: config sync (reset)
+  command: /usr/bin/git reset --hard
+  args:
+    chdir: "{{ vm_home }}"
+    creates: "{{ vm_home }}/.gitconfig.dist"
+- name: config sync (bootstrap)
+  command: /bin/sh {{ vm_home }}/bootstrap-clean.sh
+  args:
+    chdir: "{{ vm_home }}"
+    creates: "{{ vm_home }}/.gitconfig"
