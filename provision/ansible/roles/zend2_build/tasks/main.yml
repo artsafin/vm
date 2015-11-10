@@ -1,0 +1,9 @@
+- name: Ensure directory permissions
+  file:
+    path={{ item }}
+    mode=0775
+    recurse=true
+    state=directory
+  with_fileglob:
+    - "{{ app_root }}/data/cache"
+    - "{{ app_root }}/module/*"

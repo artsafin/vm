@@ -1,0 +1,145 @@
+server {
+  listen *:80;
+
+  {% if server_name_aliases is undefined %}# Add more values to server_name in server_name_aliases parameter {% endif %}
+  
+  server_name {{ server_name }} {{ server_name_aliases|default('') }};
+  root {{ www_root }};
+  index  {{ index }};
+
+  {% if remote_logs is defined %}
+    access_log            {{ remote_logs }}/nginx-access.log;
+    error_log             {{ remote_logs }}/nginx-error.log;
+  {% else %}
+    # remote_logs undefined
+    access_log            /var/log/nginx/{{ server_name }}.access.log;
+    error_log             /var/log/nginx/{{ server_name }}.error.log;
+  {% endif %}
+
+  location ~ \.php$ {
+    root  {{ www_root }};
+    try_files $uri $uri/ /{{ index }}?$args;
+    index  index.html index.htm {{ index }};
+
+    fastcgi_buffer_size 128k;
+    fastcgi_buffers 4 256k;
+    fastcgi_busy_buffers_size 256k;
+    fastcgi_connect_timeout 60;
+    fastcgi_index {{ index }};
+    fastcgi_param PATH_INFO $fastcgi_path_info;
+    fastcgi_param PATH_TRANSLATED $document_root$fastcgi_path_info;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    fastcgi_pass unix:/var/run/php5-fpm.sock;
+    fastcgi_read_timeout 600;
+    fastcgi_send_timeout 180;
+    fastcgi_split_path_info ^(.+\.php)(/.+)$;
+    fastcgi_temp_file_write_size 256k;
+    include fastcgi_params;
+
+    {% if fastcgi_params is defined -%}
+      {%- for key, value in fastcgi_params.iteritems() -%}
+        fastcgi_param {{ key }} {{ value }};
+    {% endfor -%}
+    {%- endif %}
+
+    {% if php_ini is defined -%}
+      fastcgi_param PHP_VALUE "{% for key, value in php_ini.iteritems() %}{{ key }}='{{ value|replace("'", "\'") }}' \n {% endfor %}";
+    {%- endif %}
+
+    include {{ vhost_conf_dir }}/location/*.conf;
+  }
+  
+  sendfile off;
+
+  include {{ vhost_conf_dir }}/server/*.conf;
+}
+
+
+
+{% if ssl is defined and ssl.cert is defined %}
+server {
+  listen *:443 ssl;
+
+  {% if server_name_aliases is undefined %}# Add more values to server_name in server_name_aliases parameter {% endif %}
+
+  server_name {{ server_name }} {{ server_name_aliases|default('') }};
+  root {{ www_root }};
+  index  {{ index }};
+
+  ssl on;
+
+  {% if ssl_cert_local is defined -%}
+  ssl_certificate           {{ ssl_cert_local }};
+  {%- endif %}
+
+  {% if ssl_key_local is defined -%}
+  ssl_certificate_key       {{ ssl_key_local }};
+  {% else %}
+  # Commented because ssl.key must be set
+  #ssl_certificate_key {ssl.key}
+  {%- endif %}
+
+  ssl_session_cache         shared:SSL:10m;
+  ssl_session_timeout       5m;
+  ssl_protocols             SSLv3 TLSv1 TLSv1.1 TLSv1.2;
+  ssl_ciphers               HIGH:!aNULL:!MD5;
+  ssl_prefer_server_ciphers on;
+
+  {% if ssl.verify_client is defined and ssl_client_ca_local is defined -%}
+    ssl_verify_client on;
+    ssl_client_certificate {{ ssl_client_ca_local }};
+    ssl_verify_depth {{ ssl.verify_client.depth|default(3) }};
+  {% else %}
+  # Commented because ssl.verify_client.ca_bundle must be set in Ansible playbook to enable SSL client verification
+  # ssl_verify_client on
+  # ssl_client_certificate {ssl.verify_client.ca_bundle}
+  # ssl_verify_depth {ssl.verify_client.depth}
+  {%- endif %}
+
+  {% if remote_logs is defined %}
+    access_log            {{ remote_logs }}/nginx-access.log;
+    error_log             {{ remote_logs }}/nginx-error.log;
+  {% else %}
+    # remote_logs undefined
+    access_log            /var/log/nginx/{{ server_name }}.access.log;
+    error_log             /var/log/nginx/{{ server_name }}.error.log;
+  {% endif %}
+
+  location ~ \.php$ {
+    root  {{ www_root }};
+    try_files $uri $uri/ /{{ index }}?$args;
+    index  index.html index.htm {{ index }};
+
+    fastcgi_buffer_size 128k;
+    fastcgi_buffers 4 256k;
+    fastcgi_busy_buffers_size 256k;
+    fastcgi_connect_timeout 60;
+    fastcgi_index {{ index }};
+    fastcgi_param PATH_INFO $fastcgi_path_info;
+    fastcgi_param PATH_TRANSLATED $document_root$fastcgi_path_info;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    fastcgi_pass unix:/var/run/php5-fpm.sock;
+    fastcgi_read_timeout 600;
+    fastcgi_send_timeout 180;
+    fastcgi_split_path_info ^(.+\.php)(/.+)$;
+    fastcgi_temp_file_write_size 256k;
+    include fastcgi_params;
+
+    {% if fastcgi_params is defined -%}
+      {%- for key, value in fastcgi_params.iteritems() -%}
+        fastcgi_param {{ key }} {{ value }};
+    {% endfor -%}
+    {%- endif %}
+
+    {% if php_ini is defined -%}
+      fastcgi_param PHP_VALUE "{% for key, value in php_ini.iteritems() %}{{ key }}='{{ value|replace("'", "\'") }}' \n {% endfor %}";
+    {%- endif %}
+
+    include {{ vhost_conf_dir }}/location/*.conf;
+  }
+  
+  sendfile off;
+
+  include {{ vhost_conf_dir }}/server/*.conf;
+}
+{% endif %}

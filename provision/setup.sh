@@ -12,3 +12,6 @@ apt-add-repository ppa:ansible/ansible -y
 apt-get update
 apt-get install ansible -y
 echo "localhost              ansible_connection=local" > /etc/ansible/hosts
+echo
+echo "Beginning provision"
+sudo -u vagrant -H ansible-playbook /vagrant/provision/ansible/index.yml

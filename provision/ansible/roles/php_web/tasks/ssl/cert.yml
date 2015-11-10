@@ -1,0 +1,13 @@
+- name: HTTPS/SSL - ssl cert
+  become: true
+  copy:
+    src={{ ssl.cert }}
+    dest={{ vhost_conf_dir }}/ssl/{{ ssl.cert|basename }}
+    mode=0600
+    group=www-data
+    owner=www-data
+  when: ssl.cert is defined
+
+- set_fact:
+    ssl_cert_local="{{ vhost_conf_dir }}/ssl/{{ ssl.cert|basename }}"
+  when: ssl.cert is defined

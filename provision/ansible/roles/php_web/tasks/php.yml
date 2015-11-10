@@ -1,0 +1,28 @@
+- name: Configure xdebug
+  become: true
+  lineinfile:
+    dest=/etc/php5/mods-available/xdebug.ini
+    line={{ item }}
+  with_items:
+    - "xdebug.remote_enable=On"
+    - "xdebug.remote_connect_back=On"
+    - "xdebug.remote_cookie_expire_time=864000" # 10 days
+    - "xdebug.overload_var_dump=Off"
+    - "xdebug.max_nesting_level=1000"
+  notify:
+  - restart fpm
+
+- name: Install composer - download
+  shell: "curl -sS https://getcomposer.org/installer | php -- --install-dir={{ vm_home }}/bin --filename=composer"
+  args:
+    creates: "{{ vm_home }}/bin/composer"
+  register: composer_install
+
+- name: Install composer - change permissions
+  become: true
+  file:
+    path={{ vm_home }}/bin/composer
+    owner=vagrant
+    group=vagrant
+    mode=0775
+  when: composer_install|success

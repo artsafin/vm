@@ -1,0 +1,59 @@
+- name: www-data group
+  become: true
+  group: name=www-data state=present
+
+- name: www-data user
+  become: true
+  user: name=www-data group=www-data state=present
+
+- name: add vagrant user to www-data group
+  become: true
+  user: name=vagrant groups=www-data
+
+- name: add www-data user to vagrant group
+  become: true
+  user: name=www-data groups=vagrant
+
+#- name: make source directory
+#  become: true
+#  file: path={{ source_dir }} owner=vagrant group=www-data mode=775 state=directory
+
+- name: Install PHP web stack
+  become: true
+  apt: name={{ item }} state=present
+  with_items:
+    - nginx
+    - php5
+    - php5-fpm
+    - php5-intl
+    - php5-curl
+    - php5-cli
+    - php5-mysql
+    - php5-xdebug
+    - memcached
+    - php5-memcached
+  notify:
+  - restart nginx
+  - restart fpm
+
+- name: Install additional packages
+  become: true
+  apt: name={{ item }} state=present
+  with_items: require_packages
+  when: require_packages is defined
+  notify:
+  - restart nginx
+  - restart fpm
+
+- name: Directories - logs dir
+  become: true
+  file:
+    path={{ remote_logs }}
+    owner=www-data
+    group=www-data
+    mode=0755
+    state=directory
+  when: remote_logs is defined
+
+- include: nginx.yml
+- include: php.yml

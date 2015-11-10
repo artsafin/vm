@@ -1,0 +1,21 @@
+#client_cert_ca
+
+- name: HTTPS/SSL - vhost ssl dir
+  become: true
+  file:
+    path={{ vhost_conf_dir }}/ssl
+    owner=www-data
+    group=www-data
+    mode=0700
+    state=directory
+  when: ssl is defined
+
+- include: "cert.yml"
+  when: ssl is defined and ssl.cert is defined
+
+- include: "key.yml"
+  when: ssl is defined and ssl.key is defined
+
+- include: "verify_client.yml"
+  when: ssl is defined and ssl.verify_client is defined
+

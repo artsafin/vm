@@ -1,0 +1,85 @@
+- shell: unlink /etc/nginx/sites-enabled/default
+  ignore_errors: true
+  notify:
+  - restart nginx
+
+- set_fact:
+    vhost_conf_dir="{{ nginx.root }}/vhosts/{{ server_name }}"
+
+- name: Directories - www_root
+  become: true
+  file:
+    path={{ www_root }}
+    owner=www-data
+    group=www-data
+    mode=0775
+    state=directory
+
+- name: Directories - vhost server config dir
+  become: true
+  file:
+    path={{ vhost_conf_dir }}/server
+    owner=root
+    group=root
+    mode=0755
+    state=directory
+
+- name: Directories - vhost location config dir
+  become: true
+  file:
+    path={{ vhost_conf_dir }}/location
+    owner=root
+    group=root
+    mode=0755
+    state=directory
+
+- name: Copy - server includes
+  become: true
+  template:
+    src={{ item }}
+    dest={{ vhost_conf_dir }}/server/{{ item|basename }}
+    mode=0644
+    group=root
+    owner=root
+  when: item is defined and item != ''
+  with_fileglob: server_include
+
+- name: Copy - location includes
+  become: true
+  template:
+    src={{ item }}
+    dest={{ vhost_conf_dir }}/location/{{ item|basename }}
+    mode=0644
+    group=root
+    owner=root
+  when: item is defined and item != ''
+  with_fileglob: location_include
+
+- include: ssl/main.yml
+
+- name: Create nginx config
+  become: true
+  template:
+    src=nginx_site.conf.j2
+    dest={{ nginx.sites_avail }}/{{ server_name }}.conf
+  register: nginx_config_result
+
+- name: Check nginx config
+  become: true
+  shell: nginx -t
+
+- name: Restart nginx and fpm if nginx config changed
+  shell: echo
+  notify:
+  - restart nginx
+  - restart fpm
+  when: nginx_config_result|changed
+
+- name: Make site enabled
+  become: true
+  file:
+    src={{ nginx.sites_avail }}/{{ server_name }}.conf
+    dest={{ nginx.sites_enabled }}/{{ server_name }}.conf
+    state=link
+  notify:
+  - restart nginx

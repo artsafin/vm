@@ -1,0 +1,41 @@
+- name: Install git
+  become: true
+  apt: name=git state=present
+
+# Clone repository with common environmental configs
+- name: dotconfig clone
+  git: repo={{ dotconfig_repo }}
+       dest={{ vm_home }}/dotconfig
+       force=yes
+
+- stat: path={{ vm_home }}/{{ item }}
+  with_items:
+    - dotconfig/.ssh/config.append
+    - dotconfig/.gitconfig.j2
+  register: common_env_stat
+
+#- debug: var=common_env_stat
+
+- file: path={{ vm_home }}/.ssh state=directory
+
+- name: SSH config
+  shell: cat {{ vm_home }}/dotconfig/.ssh/config.append >> {{ vm_home }}/.ssh/config && touch {{ vm_home }}/.ssh/config.append.lock
+  args:
+    creates: "{{ vm_home }}/.ssh/config.append.lock"
+  when: common_env_stat.results[0].stat.exists
+
+- name: GIT config
+  template: src={{ vm_home }}/dotconfig/.gitconfig.j2 dest={{ vm_home }}/.gitconfig
+  when: common_env_stat.results[1].stat.exists
+
+# Put cloned configs over home directory
+- file: src={{ vm_home }}/dotconfig/.git dest={{ vm_home }}/.git state=link
+- name: config sync (reset)
+  command: /usr/bin/git reset --hard
+  args:
+    chdir: "{{ vm_home }}"
+    creates: "{{ vm_home }}/.gitconfig.j2"
+
+- name: Set exec to ~/bin/*
+  file: path={{ item }} mode=0744 state=file
+  with_fileglob: "{{ vm_home }}/bin/*"

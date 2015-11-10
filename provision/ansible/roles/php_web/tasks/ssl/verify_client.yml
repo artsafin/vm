@@ -1,0 +1,13 @@
+- name: HTTPS/SSL - verify client CA bundle
+  become: true
+  copy:
+    src={{ ssl.verify_client.ca_bundle }}
+    dest={{ vhost_conf_dir }}/ssl/{{ ssl.verify_client.ca_bundle|basename }}
+    mode=0600
+    group=www-data
+    owner=www-data
+  when: ssl.verify_client.ca_bundle is defined
+
+- set_fact:
+    ssl_client_ca_local="{{ vhost_conf_dir }}/ssl/{{ ssl.verify_client.ca_bundle|basename }}"
+  when: ssl.verify_client.ca_bundle is defined

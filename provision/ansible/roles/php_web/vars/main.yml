@@ -1,0 +1,4 @@
+nginx:
+    root: /etc/nginx
+    sites_avail: /etc/nginx/sites-available
+    sites_enabled: /etc/nginx/sites-enabled

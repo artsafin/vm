@@ -1,0 +1,60 @@
+- name: "V3 build - {{ app_root|dirname|basename }} - var-scripts"
+  become: true
+  file:
+    path={{ app_root|replace('htdocs', 'var-scripts') }}
+    owner=www-data
+    group=www-data
+    mode=0775
+    state=directory
+
+- name: "V3 build - {{ app_root|dirname|basename }} - root"
+  become: true
+  file:
+    path={{ app_root }}
+    state=directory
+    owner=www-data
+    group=www-data
+    mode=0775
+
+- name: "V3 build - {{ app_root|dirname|basename }} - phpinfo"
+  copy:
+    content="<?php phpinfo();"
+    dest="{{ app_root }}/i.php"
+
+- name: "V3 build - {{ app_root|dirname|basename }} - symlinks"
+  file:
+    src={{ item.src }}
+    dest={{ item.dest }}
+    force=yes
+    state=link
+  with_items:
+    - { src: "{{ core }}/classes", dest: "{{ app_root }}/classes" }
+    - { src: "{{ config }}", dest: "{{ app_root }}/config.php" }
+    - { src: "{{ index }}/cron", dest: "{{ app_root }}/cron" }
+    - { src: "{{ index }}/crossmodule.php", dest: "{{ app_root }}/crossmodule.php" }
+    - { src: "{{ index }}/index.php", dest: "{{ app_root }}/index.php" }
+    - { src: "{{ modules }}/lib", dest: "{{ app_root }}/lib" }
+    - { src: "{{ modules }}/modules", dest: "{{ app_root }}/modules" }
+    - { src: "{{ core }}/modules_system", dest: "{{ app_root }}/modules_system" }
+    - { src: "{{ static }}", dest: "{{ app_root }}/static" }
+    - { src: "{{ index }}/templates", dest: "{{ app_root }}/templates" }
+    - { src: "{{ index }}/opcache.php", dest: "{{ app_root }}/opcache.php" }
+
+- name: "V3 build - {{ app_root|dirname|basename }} - utils"
+  become: true
+  file:
+    path={{ app_root }}/utils
+    owner=www-data
+    group=www-data
+    mode=0775
+    state=directory
+
+- stat: path={{ index }}/utils
+  register: index_utils_stat
+
+#- debug: var=index_utils_stat
+
+- name: "V3 build - {{ app_root|dirname|basename }} - utils"
+  shell: cp {{ index }}/utils/* {{ app_root }}/utils/
+  ignore_errors: true
+  when: index_utils_stat.stat.exists and index_utils_stat.stat.isdir

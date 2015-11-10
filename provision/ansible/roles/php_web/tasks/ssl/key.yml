@@ -1,0 +1,13 @@
+- name: HTTPS/SSL - ssl key
+  become: true
+  copy:
+    src={{ ssl.key }}
+    dest={{ vhost_conf_dir }}/ssl/{{ ssl.key|basename }}
+    mode=0600
+    group=www-data
+    owner=www-data
+  when: ssl.key is defined
+
+- set_fact:
+    ssl_key_local="{{ vhost_conf_dir }}/ssl/{{ ssl.key|basename }}"
+  when: ssl.key is defined

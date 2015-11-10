@@ -1,0 +1,45 @@
+- name: Dir for common logs
+  file:
+    path={{ dest }}
+    owner=www-data
+    group=www-data
+    mode=0775
+    state=directory
+  when: dest is defined
+
+- stat: path={{ src }}
+  register: src_stat
+  when: src is defined
+
+#- debug: var=src_stat
+
+- name: Logs - copy existing logs to common log dir
+  shell: cp -R {{ item }} {{ dest }}/
+  when: dest is defined and src_stat.stat.exists and (not src_stat.stat.islnk)
+  with_fileglob: "{{ src }}/*"
+
+- name: Logs - make symlink to common log dir (rm)
+  shell: rm -rf {{ src }}
+  become: true
+  when: dest is defined and src_stat.stat.exists and (not src_stat.stat.islnk)
+
+- name: Logs - make symlink to common log dir (ln)
+  file:
+    src={{ dest }}
+    dest={{ src }}
+    state=link
+  when: dest is defined
+
+- name: Ensure data/logs is directory when no common logs enabled (rm)
+  file: path={{ src }} state=absent
+  when: dest is undefined and src_stat.stat.exists and (not src_stat.stat.isdir)
+
+- name: Ensure data/logs is directory when no common logs enabled (mkdir)
+  become: true
+  file:
+    path={{ src }}
+    group=www-data
+    owner=www-data
+    mode=0775
+    state=directory
+  when: dest is undefined and (not src_stat.stat.isdir)

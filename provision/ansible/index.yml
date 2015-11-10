@@ -1,8 +1,134 @@
 ---
 - hosts: localhost
+  remote_user: vagrant
+  gather_facts: no
   vars:
     vm_home: /home/vagrant
-    src_home: /home/src
+    apps: /vagrant/provision/apps
+    logs: /vagrant/app-logs
   roles:
-  - { role: common, dotconfig_repo: 'https://github.com/artsafin/dotconfig.git' }
+  - role: common_env
+    dotconfig_repo: 'https://github.com/artsafin/dotconfig.git'
+    common:
+        name: Artur Safin
+        email: artur.safin@forextime.com
 
+  # SAS4
+  - role: php_web
+    server_name: sas-ip-new.saf
+    server_name_aliases: sas-ip.saf sas-ip.dev
+    require_packages:
+      - php5-sqlite
+      - php5-ldap
+    www_root: /home/src/{{ server_name }}/web
+    index: app_env.php
+    server_include: "{{ apps }}/{{ server_name }}/nginx_conf.d/*.conf"
+    remote_logs: "{{ logs }}/{{ server_name }}"
+    fastcgi_params:
+      APP_ENV: dev
+      SSL_CLIENT_S_DN: "$ssl_client_s_dn"
+      SSL_CLIENT_I_DN: "$ssl_client_i_dn"
+    php_ini:
+      error_reporting: -1
+      error_log: "{{ remote_logs }}/php_errors.log"
+    ssl:
+      verify_client:
+        depth: 9
+        ca_bundle: "{{ apps }}/{{ server_name }}/ca-bundle.crt"
+      cert: "{{ apps }}/{{ server_name }}/server.crt"
+      key: "{{ apps }}/{{ server_name }}/server.key"
+
+  - role: dir_symlink
+    dest: "{{ logs }}/sas-ip-new.saf/application"
+    src: /home/src/sas-ip-new.saf/app/var/logs
+
+  # CMS-IP
+  - role: php_web
+    server_name: cms-ip-new.saf
+    server_name_aliases: cms-ip.saf cms-ip.dev
+    require_packages:
+      - php5-memcache
+    www_root: /home/www-data/{{ server_name }}/htdocs
+    index: index.php
+    server_include: "{{ apps }}/{{ server_name }}/nginx_conf.d/*.conf"
+    remote_logs: "{{ logs }}/{{ server_name }}"
+    fastcgi_params:
+      SSL_CLIENT_S_DN: "$ssl_client_s_dn"
+      SSL_CLIENT_I_DN: "$ssl_client_i_dn"
+    php_ini:
+      display_errors: "Off"
+      short_open_tag: "On"
+      error_log: "{{ remote_logs }}/php_errors.log"
+    ssl:
+      verify_client:
+        depth: 9
+        ca_bundle: "{{ apps }}/{{ server_name }}/ca-bundle.crt"
+      cert: "{{ apps }}/{{ server_name }}/server.crt"
+      key: "{{ apps }}/{{ server_name }}/server.key"
+
+  - role: v3_symlinks
+    config: /home/src/ip/configs/cms-ip.saf.php
+    core: /home/src/ip/cms-ip-core
+    modules: /home/src/ip/cms-ip-modules
+    index: /home/src/ip/cms-ip-index/cms
+    static: /home/src/ip/cms-ip-static
+    app_root: /home/www-data/cms-ip-new.saf/htdocs
+
+  # MY-IP
+  - role: php_web
+    server_name: my-ip-new.saf
+    server_name_aliases: my-ip.saf my-ip.dev
+    require_packages:
+      - php5-memcache
+    www_root: /home/www-data/{{ server_name }}/htdocs
+    index: index.php
+    server_include: "{{ apps }}/{{ server_name }}/nginx_conf.d/*.conf"
+    remote_logs: "{{ logs }}/{{ server_name }}"
+    fastcgi_params:
+      SSL_CLIENT_S_DN: "$ssl_client_s_dn"
+      SSL_CLIENT_I_DN: "$ssl_client_i_dn"
+    php_ini:
+      display_errors: "Off"
+      short_open_tag: "On"
+      error_log: "{{ remote_logs }}/php_errors.log"
+    ssl:
+      verify_client:
+        depth: 9
+        ca_bundle: "{{ apps }}/{{ server_name }}/ca-bundle.crt"
+      cert: "{{ apps }}/{{ server_name }}/server.crt"
+      key: "{{ apps }}/{{ server_name }}/server.key"
+
+  - role: v3_symlinks
+    config: /home/src/ip/configs/my-ip.saf.php
+    core: /home/src/ip/cms-ip-core
+    modules: /home/src/ip/cms-ip-modules
+    index: /home/src/ip/cms-ip-index/my
+    static: /home/src/ip/cms-ip-static
+    app_root: /home/www-data/my-ip-new.saf/htdocs
+
+  # FXTM API
+  - role: php_web
+    #require_packages:
+    server_name: fxtm_api_new.saf
+    server_name_aliases: fxtm_api.saf fxtm-api.saf fxtm-api.dev
+    www_root: /home/src/{{ server_name }}/public
+    index: index.php
+    server_include: "{{ apps }}/{{ server_name }}/nginx_conf.d/*.conf"
+    #location_include: "{{ apps }}/{{ server_name }}/nginx_conf.d/fastcgi_params"
+    remote_logs: "{{ logs }}/{{ server_name }}"
+    fastcgi_params:
+      APP_ENV: dev
+    php_ini:
+      display_errors: "On"
+      error_reporting: -1
+      error_log: "{{ remote_logs }}/php_errors.log"
+    ssl:
+      cert: "{{ apps }}/{{ server_name }}/server.crt"
+      key: "{{ apps }}/{{ server_name }}/server.key"
+
+  - role: dir_symlink
+    dest: "{{ logs }}/fxtm_api_new.saf/application"
+    src: /home/src/fxtm_api_new.saf/data/logs
+
+  - role: zend2_build
+    app_root: /home/src/fxtm_api_new.saf
